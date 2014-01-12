@@ -13,17 +13,21 @@ MKDIR?=mkdir
 RMDIR?=rmdir
 INSTALL?=install
 STRIP?=strip -s
-CFLAGS?= -fPIC -Wall -O0 -fbuiltin -g
+CFLAGS?= -fPIC -Wall
 EXTRA_CFLAGS?= -DHAVE_GETOPT_H=1
 INCLUDES?=
-# -I../lib
-LDFLAGS?= -L/usr/src/openwrt/trunk/staging_dir/host/lib -L/usr/lib
+LDFLAGS?= -L/usr/lib
 EXTRA_LDFLAGS?=
 LIBS= -lext2fs -lm
 EXTRA_LIBS?=
 EXTRAVERSION?=
 
-####################################################################
+##################################################
+#                                                #
+#  Don't go changing stuff further this point..  #
+#  Unless, you really know what you are doing..  #
+#                                                #
+##################################################
 
 VERSION_MAJOR=0
 VERSION_MINOR=9
