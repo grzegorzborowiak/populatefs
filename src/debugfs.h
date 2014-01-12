@@ -14,6 +14,8 @@ extern int fs_isReadWrite(void);
 
 extern ext2_ino_t name_to_inode(char *name);
 extern __u16 inode_mode(char *name);
+extern __u16 modeType(__u16 mode);
+extern __u16 ext2_fileType(__u16 mode);
 
 extern int do_chmode(char *name, mode_t mode);
 extern int do_chmod(char *name, unsigned long mode);
