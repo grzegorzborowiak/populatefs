@@ -36,10 +36,11 @@ LIBPOPULATEFS=libpopulatefs
 LIBPOPULATEFS_DEPENDS=src/debugfs.o src/util.o src/linklist.o src/mod_file.o src/mod_path.o src/log.o
 LDADD_LIBPOPULATEFS= -lpopulatefs
 OBJS=src/util.o src/log.o src/linklist.o src/debugfs.o src/mod_path.o src/mod_file.o
+HDRS=src/log.h src/util.h src/linklist.h src/debugfs.h src/mod_path.h src/mod_file.h
 
-all: $(OBJS) src/main.o src/$(LIBPOPULATEFS).a src/$(LIBPOPULATEFS).so.$(VERSION) src/populatefs
+all: $(HDRS) $(OBJS) src/main.o src/$(LIBPOPULATEFS).a src/$(LIBPOPULATEFS).so.$(VERSION) src/populatefs
 
-src/populatefs: src/main.o src/$(LIBPOPULATEFS).a
+src/populatefs: src/main.o src/$(LIBPOPULATEFS).a $(HDRS)
 	$(CC) $< -o $@ -L./src $(LDFLAGS) $(EXTRA_LDFLAGS) -Wl,-Bstatic $(LDADD_LIBPOPULATEFS) -Wl,-Bdynamic $(LIBS) $(EXTRA_LIBS)
 
 src/%.o: src/%.c
@@ -57,7 +58,7 @@ install-bin: src/populatefs
 	$(INSTALL) src/populatefs $(DESTDIR)/$(bindir)/
 	$(STRIP) $(DESTDIR)/$(bindir)/populatefs
 
-install-headers: src/log.h src/util.h src/linklist.h src/debugfs.h src/mod_path.h src/mod_file.h
+install-headers: $(HDRS)
 	$(MKDIR) -p $(DESTDIR)/$(includedir)/populatefs
 	$(CP) src/log.h $(DESTDIR)/$(includedir)/populatefs/
 	$(CP) src/util.h $(DESTDIR)/$(includedir)/populatefs/
