@@ -104,9 +104,9 @@ int main(int argc, char **argv)
 		struct stat st;
 		stat(source[c], &st);
 
-		if ( st.st_mode & S_IFMT )
+		if (( st.st_mode & S_IFMT ) == S_IFREG )
 			printf("Populating filesystem from filespec (%s)\r\n", source[c]);
-		else if ( st.st_mode & S_IFDIR )
+		else if (( st.st_mode & S_IFMT ) == S_IFDIR )
 			printf("Populating filesystem from path (%s)\r\n", source[c]);
 		else
 			log_error("%s is neither a file nor existing path.", source[c]);
