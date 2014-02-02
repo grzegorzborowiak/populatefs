@@ -9,7 +9,7 @@ To produce a something like 42mb image:
 dd if=/dev/zero of=root.ext4 seek=42720 count=0 bs=1k
 mkfs.ext4 -F -E root_owner=0:0 -L [Label] -N [inode count] -O [ext4 options] -m 0 root.ext4
 
-I fabricated the util for OpenWrt and Raspberry Pi, there for I might use..
+I made the util for OpenWrt and Raspberry Pi, so I might use..
 [Label] = OpenWrt
 [inode count] = 8096
 [ext4 options] = has_journal,ext_attr,resize_inode,dir_index,filetype,extent,flex_bg,sparse_super,large_file,uninit_bg,dir_nlink,extra_isize
