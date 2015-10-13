@@ -151,12 +151,9 @@ void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 
 				case 's':
 				case 'p':
-				case 'f':
 					if ( type == 's' )
 						mode |= LINUX_S_IFSOCK;
-					else if ( type == 'p' )
-						mode |= LINUX_S_IFIFO;
-					else mode |= LINUX_S_IFREG;
+					else mode |= LINUX_S_IFIFO;
 
 					if ( overWrite ) {
 						log_action(ACT_RM, dname, NULL, 0, 0, 0, 0, 0, 0, overWrite);
@@ -232,12 +229,9 @@ void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 
 			case 's':
 			case 'p':
-			case 'f':
 				if ( type == 's' )
 					mode |= LINUX_S_IFSOCK;
-				else if ( type == 'p' )
-					mode |= LINUX_S_IFIFO;
-				else mode |= LINUX_S_IFREG;
+				else mode |= LINUX_S_IFIFO;
 
 				if ( overWrite ) {
 					log_action(ACT_RM, name, NULL, 0, 0, 0, 0, 0, 0, overWrite);
