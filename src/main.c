@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 				do_chown(".", squash_uids ? 0 : st.st_uid, squash_uids ? 0 : st.st_gid);
 				firstRun = 0;
 			}
-			addFilespec(fd, squash_uids, squash_perms);
+			addFilespec(fd, 0, 0);
 			fclose(fd);
 			break;
 		case S_IFDIR:
