@@ -18,7 +18,7 @@ EXTRA_CFLAGS?= -DHAVE_GETOPT_H=1
 INCLUDES?=
 LDFLAGS?= -L/usr/lib
 EXTRA_LDFLAGS?=
-LIBS= -lext2fs -lm
+LIBS= -lext2fs
 EXTRA_LIBS?=
 EXTRAVERSION?=
 
@@ -30,7 +30,7 @@ EXTRAVERSION?=
 ##################################################
 
 VERSION_MAJOR=0
-VERSION_MINOR=9
+VERSION_MINOR=10
 VERSION=$(VERSION_MAJOR).$(VERSION_MINOR)
 LIBPOPULATEFS=libpopulatefs
 LIBPOPULATEFS_DEPENDS=src/debugfs.o src/util.o src/linklist.o src/mod_file.o src/mod_path.o src/log.o

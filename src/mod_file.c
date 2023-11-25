@@ -8,14 +8,7 @@
 #include "log.h"
 #include "debugfs.h"
 #include "mod_file.h"
-
-#if 0 // C99 define "a" for floating point, so you can have runtime surprise varying from the version of the library
-# define SCANF_PREFIX "a"
-# define SCANF_STRING(s) (&s)
-#else
-# define SCANF_PREFIX "511"
-# define SCANF_STRING(s) (s = malloc(512))
-#endif
+#include "util.h"
 
 void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 {
@@ -25,7 +18,7 @@ void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 	char *c, *dir, *name, *dname = NULL, *path = NULL, *path2 = NULL, *line = NULL;
 	char type;
 	size_t len;
-	int argv, i2, overWrite = 0, lineno = 0;
+	int argv, octpower, overWrite = 0, lineno = 0;
 	__u16 inodeType;
 
 	while ( getline(&line, &len, fd) >= 0 ) {
@@ -40,22 +33,27 @@ void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 		if ( path2 ) {
 			free( path2 ); path2 = NULL;
 		}
+	
+		path = (char*)malloc(strlen(line) + 1);
 
-		argv = sscanf(line, "%" SCANF_PREFIX "s %c %ld %lu %lu %lu %lu %lu %lu %lu",
-			      SCANF_STRING(path), &type, &rmode, &uid, &gid, &major, &minor,
+		const char * meta = parseQuotes(line, path);
+
+		argv = sscanf(meta, "%c %ld %lu %lu %lu %lu %lu %lu %lu",
+			      &type, &rmode, &uid, &gid, &major, &minor,
 			      &start, &increment, &count);
 
-		if ( argv < 3 ) {
+		if ( argv < 2 ) {
 			if ( argv > 0 )
 				log_warning("device table[%d]: bad format for entry '%s' [skip]", lineno, path);
 			continue;
 		}
 
-		i2 = 0;
 		octmode = rmode;
 		decmode = 0;
+		octpower = 1;
 		while ( octmode != 0 ) {
-			decmode = decmode + (octmode % 10) * pow(8, i2++);
+			decmode = decmode + (octmode % 10) * octpower;
+			octpower <<= 3;
 			octmode = octmode / 10;
 		}
 
