@@ -13,7 +13,7 @@
 void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 {
 
-	long mode, uid, gid, major, minor, i;
+	long mode, uid, gid, major, minor;
 	long start, increment, count;
 	char *c, *dir, *name, *dname = NULL, *path = NULL, *line = NULL;
 	char type;
@@ -91,7 +91,7 @@ void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 			mode &= ~( LINUX_S_IRWXG | LINUX_S_IRWXO);
 		}
 
-		int index_len = 10;
+		int index_len = 20;
 		int name_len = strlen(name);
 
 		dname = malloc(name_len + index_len + 1);
@@ -104,9 +104,9 @@ void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 			start = -1;
 		}
 
-		for ( i = start; i < count; i++ ) {
+		for ( int i = start; i < count; i++ ) {
 			if ( count > 0 ) {
-				snprintf(dname_index, index_len, "%ld", i);
+				snprintf(dname_index, index_len, "%d", i);
 			}
 
 			if (( overWrite = name_to_inode(dname)))
