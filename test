@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#set -x
+set -e
+
+cd "$(dirname "$0")"
+
+tc="$1"
+
+if ! [ -d "$tc" ]; then
+    echo 1>&2 "specify test case"
+    exit 2
+fi
+
+img=/tmp/popfs.img
+mp=/tmp/popfs
+
+cleanup()
+{
+    sudo umount "$mp"
+}
+
+ret=0
+dd if=/dev/zero of="$img" count=8 bs=1M
+mkfs.ext3 "$img"
+./build/populatefs -d "$tc"/raw -U "$img"
+./build/populatefs -d "$tc"/spec -U "$img"
+./build/populatefs -d "$tc"/append -U "$img"
+mkdir -p "$mp"
+trap 'cleanup' ERR
+sudo mount -o loop "$img" "$mp"
+sudo find "$mp" -mindepth 1 -printf "%P\0" | while read -d $'\0' i; do
+    printf "e: %q ... " "$i"
+    if [ -e "$mp/$i" ]; then
+        echo "OK"
+    else
+        echo "FAIL"
+        ret=1
+    fi
+done
+sudo ls -lR "$mp"
+./build/populatefs_convert_to_pseudo "$tc"/raw "$tc"/spec
+cleanup
+exit $ret

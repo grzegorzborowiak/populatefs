@@ -13,56 +13,60 @@
 void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 {
 
-	unsigned long rmode, mode, uid, gid, major, minor, i;
-	unsigned long start, increment, count, octmode, decmode;
-	char *c, *dir, *name, *dname = NULL, *path = NULL, *path2 = NULL, *line = NULL;
+	long mode, uid, gid, major, minor, i;
+	long start, increment, count;
+	char *c, *dir, *name, *dname = NULL, *path = NULL, *line = NULL;
 	char type;
 	size_t len;
-	int argv, octpower, overWrite = 0, lineno = 0;
+	int overWrite = 0, lineno = 0;
 	__u16 inodeType;
 
 	while ( getline(&line, &len, fd) >= 0 ) {
-		rmode = mode = uid = gid = major = minor = start = count = overWrite = 0;
+		type = mode = uid = gid = major = minor = start = count = overWrite = 0;
 		increment = 1;
 		lineno++;
 
-		if (( c = strchr(line, '#'))) *c = 0;
-		if ( path ) {
-			free( path ); path = NULL;
-		}
-		if ( path2 ) {
-			free( path2 ); path2 = NULL;
-		}
-	
-		path = (char*)malloc(strlen(line) + 1);
-
-		const char * meta = parseQuotes(line, path);
-
-		argv = sscanf(meta, "%c %ld %lu %lu %lu %lu %lu %lu %lu",
-			      &type, &rmode, &uid, &gid, &major, &minor,
-			      &start, &increment, &count);
-
-		if ( argv < 2 ) {
-			if ( argv > 0 )
-				log_warning("device table[%d]: bad format for entry '%s' [skip]", lineno, path);
-			continue;
+		if (( c = strchr(line, '#'))) {
+			*c = 0;
 		}
 
-		octmode = rmode;
-		decmode = 0;
-		octpower = 1;
-		while ( octmode != 0 ) {
-			decmode = decmode + (octmode % 10) * octpower;
-			octpower <<= 3;
-			octmode = octmode / 10;
-		}
+		path = line;
+
+		char * next = nextToken(line, line);
+
+		char * token;
+
+		next = nextToken(next, token = next);
+		type = token[0];
+
+		next = nextToken(next, token = next);
+		mode = atoi(token);
+
+		next = nextToken(next, token = next);
+		uid = atoi(token);
+
+		next = nextToken(next, token = next);
+		gid = atoi(token);
+
+		next = nextToken(next, token = next);
+		major = atoi(token);
+
+		next = nextToken(next, token = next);
+		minor = atoi(token);
+
+		next = nextToken(next, token = next);
+		start = atoi(token);
+
+		next = nextToken(next, token = next);
+		increment = atoi(token);
+
+		next = nextToken(next, token = next);
+		count = atoi(token);
 
 		if ( squash_uids ) uid = gid = 0;
 
-		mode = decmode;
-		path2 = strdup( path );
 		name = basename( path );
-		dir = dirname( path2 );
+		dir = dirname( path );
 
 		if (( !strcmp(name, ".")) || ( !strcmp(name, "..")) || ( !strcmp(name, "/"))) {
 			log_warning("device table[%d]: [skip]", lineno);
@@ -84,187 +88,101 @@ void addFilespec(FILE *fd, int squash_uids, int squash_perms)
 		}
 
 		if (squash_perms) {
-			mode &= ~( LINUX_S_IRWXG | LINUX_S_IRWXO );
-			rmode &= ~( LINUX_S_IRWXG | LINUX_S_IRWXO);
+			mode &= ~( LINUX_S_IRWXG | LINUX_S_IRWXO);
 		}
 
-		if ( count > 0 ) {
+		int index_len = 10;
+		int name_len = strlen(name);
 
-			if ( dname ) {
-				free( dname );
-				dname = NULL;
+		dname = malloc(name_len + index_len + 1);
+			
+		char * dname_index = dname + name_len;
+
+		strcpy(dname, name);
+
+		if ( count == 0 ) {
+			start = -1;
+		}
+
+		for ( i = start; i < count; i++ ) {
+			if ( count > 0 ) {
+				snprintf(dname_index, index_len, "%ld", i);
 			}
 
-			unsigned len;
-			len = strlen(name) + 10;
-			dname = malloc(len + 1);
-
-			for ( i = start; i < count; i++ ) {
-				snprintf(dname, len, "%s%lu", name, i);
-
-				if (( overWrite = name_to_inode(dname)))
-					inodeType = inode_mode(dname);
-
-				if (( type == 'd' ) && ( overWrite ) && ( !LINUX_S_ISDIR(inodeType)))
-					log_error("[Remote fs mismatch] %s/%s exists but isn't a directory when it should be.", log_cwd(), dname);
-				else if (( type != 'd' ) && ( overWrite )) {
-
-					if ( LINUX_S_ISDIR(inodeType))
-						log_error("[Remote fs mismatch] %s/%s exists but is a directory when it shouldn't be.", log_cwd(), dname);
-
-					if ((!LINUX_S_ISREG(inodeType)) && (!LINUX_S_ISLNK(inodeType)) &&
-					    (!LINUX_S_ISBLK(inodeType)) && (!LINUX_S_ISCHR(inodeType)) &&
-					    (!LINUX_S_ISFIFO(inodeType)) && (!LINUX_S_ISSOCK(inodeType)))
-						log_error("[Remote fs mismatch] Existing file %s/%s has unknown/unsupported type [0x%x].", log_cwd(), dname, inodeType);
-				}
-
-				switch ( type ) {
-				case 'd':
-					mode |= LINUX_S_IFDIR;
-					log_action(ACT_MKDIR, dname, NULL, 0, 0, 0, 0, 0, 0, overWrite);
-
-					if ( !overWrite )
-						if ( !do_mkdir(dname))
-							log_error("[Filesystem error] cannot mkdir %s/%s", log_cwd(), dname);
-
-					break;
-
-				case 'c':
-				case 'b':
-					if ( type == 'c' )
-						mode |= LINUX_S_IFCHR;
-					else
-						mode |= LINUX_S_IFBLK;
-
-					if ( overWrite ) {
-						log_action(ACT_RM, dname, NULL, 0, 0, 0, 0, 0, 0, overWrite);
-						if ( !do_rm(dname))
-							log_error("[Filesystem error] cannot rm %s/%s", log_cwd(), dname);
-					}
-
-					log_action(ACT_MKNOD, dname, NULL, 0, 0, 0, type, major, minor + ((i * increment) - start), overWrite);
-					if ( !do_mknod(dname, type, major, minor + ((i * increment) - start)))
-						log_error("[Filesystem error] cannot mknod %s/%s", log_cwd(), dname);
-					break;
-
-				case 's':
-				case 'p':
-					if ( type == 's' )
-						mode |= LINUX_S_IFSOCK;
-					else mode |= LINUX_S_IFIFO;
-
-					if ( overWrite ) {
-						log_action(ACT_RM, dname, NULL, 0, 0, 0, 0, 0, 0, overWrite);
-						if ( !do_rm(dname))
-							log_error("[Filesystem error] cannot rm %s/%s", log_cwd(), dname);
-					}
-
-					log_action(ACT_MKNOD, dname, NULL, 0, 0, 0, type, 0, 0, overWrite);
-					if ( !do_mknod(dname, type, 0, 0))
-						log_error("[Filesystem error] cannot mknod %s/%s", log_cwd(), dname);
-
-					break;
-				}
-
-				log_action(ACT_CHMOD, dname, NULL, rmode, 0, 0, 0, 0, 0, 0);
-				if ( !do_chmod(dname, rmode))
-					log_error("[Filesystem error] cannot chmod %s/%s", log_cwd(), dname);
-				log_action(ACT_CHOWN, dname, NULL, 0, uid, gid, 0, 0, 0, 0);
-				if ( !do_chown(dname, uid, gid))
-					log_error("[Filesystem error] cannot chown %s/%s", log_cwd(), dname);
-			}
-
-			log_action(ACT_CHDIR, "/", NULL, 0, 0, 0, 0, 0, 0, 0);
-			if ( !do_chdir("/"))
-				log_error("[Filesystem error] cannot chdir to root");
-			free(dname);
-			dname = NULL;
-
-		} else {
-
-			if (( overWrite = name_to_inode(name)))
-				inodeType = inode_mode(name);
+			if (( overWrite = name_to_inode(dname)))
+				inodeType = inode_mode(dname);
 
 			if (( type == 'd' ) && ( overWrite ) && ( !LINUX_S_ISDIR(inodeType)))
 				log_error("[Remote fs mismatch] %s/%s exists but isn't a directory when it should be.", log_cwd(), dname);
-			else if ( type != 'd' ) {
-				if (( overWrite ) && ( LINUX_S_ISDIR(inodeType)))
+			else if (( type != 'd' ) && ( overWrite )) {
+
+				if ( LINUX_S_ISDIR(inodeType))
 					log_error("[Remote fs mismatch] %s/%s exists but is a directory when it shouldn't be.", log_cwd(), dname);
 
-				if (( overWrite ) && (!LINUX_S_ISREG(inodeType)) && (!LINUX_S_ISLNK(inodeType)) &&
-				    (!LINUX_S_ISBLK(inodeType)) && (!LINUX_S_ISCHR(inodeType)) &&
-				    (!LINUX_S_ISFIFO(inodeType)) && (!LINUX_S_ISSOCK(inodeType)))
-					log_error("[Remote fs mismatch] Existing file %s/%s has unknown/unsupported type [0x%x].",  log_cwd(), dname, inodeType);
+				if ((!LINUX_S_ISREG(inodeType)) && (!LINUX_S_ISLNK(inodeType)) &&
+					(!LINUX_S_ISBLK(inodeType)) && (!LINUX_S_ISCHR(inodeType)) &&
+					(!LINUX_S_ISFIFO(inodeType)) && (!LINUX_S_ISSOCK(inodeType)))
+					log_error("[Remote fs mismatch] Existing file %s/%s has unknown/unsupported type [0x%x].", log_cwd(), dname, inodeType);
 			}
 
 			switch ( type ) {
 			case 'd':
-				mode |= LINUX_S_IFDIR;
-				log_action(ACT_MKDIR, name, NULL, 0, 0, 0, 0, 0, 0, overWrite);
+				log_action(ACT_MKDIR, dname, NULL, 0, 0, 0, 0, 0, 0, overWrite);
 
 				if ( !overWrite )
-					if ( !do_mkdir(name))
-						log_error("[Filesystem error] cannot mkdir %s/%s", log_cwd(), name);
+					if ( !do_mkdir(dname))
+						log_error("[Filesystem error] cannot mkdir %s/%s", log_cwd(), dname);
+
 				break;
 
 			case 'c':
 			case 'b':
-				if ( type == 'c' )
-					mode |= LINUX_S_IFCHR;
-				else
-					mode |= LINUX_S_IFBLK;
-
 				if ( overWrite ) {
-					log_action(ACT_RM, name, NULL, 0, 0, 0, 0, 0, 0, overWrite);
-					if ( !do_rm(name))
-						log_error("[Filesystem error] cannot rm %s/%s", log_cwd(), name);
+					log_action(ACT_RM, dname, NULL, 0, 0, 0, 0, 0, 0, overWrite);
+					if ( !do_rm(dname))
+						log_error("[Filesystem error] cannot rm %s/%s", log_cwd(), dname);
 				}
 
-				log_action(ACT_MKNOD, name, NULL, 0, 0, 0, type, major, minor, overWrite);
-				if ( !do_mknod(name, type, major, minor))
-					log_error("[Filesystem error] cannot mknod %s/%s", log_cwd(), name);
+				log_action(ACT_MKNOD, dname, NULL, 0, 0, 0, type, major, minor + ((i * increment) - start), overWrite);
+				if ( !do_mknod(dname, type, major, minor + ((i * increment) - start)))
+					log_error("[Filesystem error] cannot mknod %s/%s", log_cwd(), dname);
 				break;
 
 			case 's':
 			case 'p':
-				if ( type == 's' )
-					mode |= LINUX_S_IFSOCK;
-				else mode |= LINUX_S_IFIFO;
 
 				if ( overWrite ) {
-					log_action(ACT_RM, name, NULL, 0, 0, 0, 0, 0, 0, overWrite);
-					if ( !do_rm(name))
-						log_error("[Filesystem error] cannot rm %s/%s", log_cwd(), name);
+					log_action(ACT_RM, dname, NULL, 0, 0, 0, 0, 0, 0, overWrite);
+					if ( !do_rm(dname))
+						log_error("[Filesystem error] cannot rm %s/%s", log_cwd(), dname);
 				}
 
-				log_action(ACT_MKNOD, name, NULL, 0, 0, 0, type, 0, 0, overWrite);
-				if ( !do_mknod(name, type, 0, 0))
-					log_error("[Filesystem error] cannot mknod %s/%s", log_cwd(), name);
+				log_action(ACT_MKNOD, dname, NULL, 0, 0, 0, type, 0, 0, overWrite);
+				if ( !do_mknod(dname, type, 0, 0))
+					log_error("[Filesystem error] cannot mknod %s/%s", log_cwd(), dname);
+
 				break;
 			}
 
-			log_action(ACT_CHMOD, name, NULL, rmode, 0, 0, 0, 0, 0, 0);
-			if ( !do_chmod(name, rmode))
-				log_error("[Filesystem error] cannot chmod %s/%s", log_cwd(), name);
-			log_action(ACT_CHOWN, name, NULL, 0, uid, gid, 0, 0, 0, 0);
-			if ( !do_chown(name, uid, gid))
-				log_error("[Filesystem error] cannot chown %s/%s", log_cwd(), name);
-			log_action(ACT_CHDIR, "/", NULL, 0, 0, 0, 0, 0, 0, 0);
-			if ( !do_chdir("/"))
-				log_error("[Filesystem error] cannot chdir to root");
+			log_action(ACT_CHMOD, dname, NULL, mode, 0, 0, 0, 0, 0, 0);
+			if ( !do_chmod(dname, mode))
+				log_error("[Filesystem error] cannot chmod %s/%s", log_cwd(), dname);
+			log_action(ACT_CHOWN, dname, NULL, 0, uid, gid, 0, 0, 0, 0);
+			if ( !do_chown(dname, uid, gid))
+				log_error("[Filesystem error] cannot chown %s/%s", log_cwd(), dname);
 		}
+
+		log_action(ACT_CHDIR, "/", NULL, 0, 0, 0, 0, 0, 0, 0);
+		if ( !do_chdir("/"))
+			log_error("[Filesystem error] cannot chdir to root");
+		free(dname);
+		dname = NULL;
 
 	}
 
 
 	if ( line ) {
 		free( line ); line = NULL;
-	}
-	if ( path ) {
-		free( path ); path = NULL;
-	}
-	if ( path2 ) {
-		free( path2 ); path2 = NULL;
 	}
 
 }

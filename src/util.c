@@ -18,7 +18,7 @@ unsigned long oct2dec(unsigned long int value)
 }
 
 
-static int nextDigit(int so_far, const char ** in, int base)
+static int nextDigit(int so_far, char ** in, int base)
 {
 	char buf[2] = "0";
 	buf[0] = **in;
@@ -31,11 +31,12 @@ static int nextDigit(int so_far, const char ** in, int base)
 }
 
 
-const char * parseQuotes(const char * in, char * out)
+char * nextToken(char * in, char * out)
 {
 	char quote = 0;
 	int end = 0;
 	char c;
+	for ( ; *in && isspace(*in); ++in ) {}
 	for ( ; (c = *in) != 0 && ! end; ++in ) {
 		int escaped = 0;
 		switch ( c ) {
@@ -93,10 +94,12 @@ const char * parseQuotes(const char * in, char * out)
 			default:
 				break;
 		}
-		if ( c ) {
+		if ( c && out ) {
 			*(out++) = c;
 		}
 	}
-	*out = 0;
+	if ( out ) {
+		*out = 0;
+	}
 	return in;
 }

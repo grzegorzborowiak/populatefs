@@ -66,7 +66,7 @@ void internal_log_chdir(char *path)
 			log_error("[log/chdir] Memory allocation error (logPath --> %s)", path);
 
 		memset(logPath, 0, pathLen + 1);
-		snprintf(logPath, pathLen + 1, path);
+		snprintf(logPath, pathLen + 1, "%s", path);
 	} else { // chdir to directory in current path
 
 		char *tmpPath = NULL;
@@ -91,12 +91,12 @@ void internal_log_chdir(char *path)
 				log_error("[log/chdir] Memory allocation error (tmpPath --> %s)", path);
 
 			memset(tmpPath, 0, pathLen + 2);
-			snprintf(tmpPath, pathLen + 1, logPath);
+			snprintf(tmpPath, pathLen + 1, "%s", logPath);
 			free( logPath );
 			logPath = NULL;
 			logPath = (char*)malloc(strlen(tmpPath) + 1);
 			memset(logPath, 0, strlen(tmpPath) + 1);
-			snprintf(logPath, pathLen + 1, tmpPath);
+			snprintf(logPath, pathLen + 1, "%s", tmpPath);
 			free(tmpPath );
 			tmpPath = NULL;
 
@@ -122,7 +122,7 @@ void internal_log_chdir(char *path)
 					log_error("[log/chdir] Memory allocation error (logPath --> %s)", path);
 
 				memset(logPath, 0, pathLen + 1);
-				snprintf(logPath, pathLen + 1, tmpPath);
+				snprintf(logPath, pathLen + 1, "%s", tmpPath);
 				free( tmpPath );
 				tmpPath = NULL;
 			} else {
@@ -139,7 +139,7 @@ void internal_log_chdir(char *path)
 					log_error("[log/chdir] Memory allocation error (logPath --> %s)", path);
 
 				memset(logPath, 0, pathLen + 1);
-				snprintf(logPath, pathLen + 1, tmpPath);
+				snprintf(logPath, pathLen + 1, "%s", tmpPath);
 				free( tmpPath );
 				tmpPath = NULL;
 			}

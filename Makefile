@@ -13,10 +13,10 @@ MKDIR?=mkdir
 RMDIR?=rmdir
 INSTALL?=install
 STRIP?=strip -s
-CFLAGS?= -fPIC -Wall
+CFLAGS?= -fPIC -Wall -Werror
 EXTRA_CFLAGS?= -DHAVE_GETOPT_H=1
 INCLUDES?=
-LDFLAGS?= -L/usr/lib
+LDFLAGS?= -L/usr/lib -L./build
 EXTRA_LDFLAGS?=
 LIBS= -lext2fs
 EXTRA_LIBS?=
@@ -29,34 +29,42 @@ EXTRAVERSION?=
 #                                                #
 ##################################################
 
-VERSION_MAJOR=0
-VERSION_MINOR=10
+VERSION_MAJOR=1
+VERSION_MINOR=0
 VERSION=$(VERSION_MAJOR).$(VERSION_MINOR)
 LIBPOPULATEFS=libpopulatefs
-LIBPOPULATEFS_DEPENDS=src/debugfs.o src/util.o src/linklist.o src/mod_file.o src/mod_path.o src/log.o
+LIBPOPULATEFS_DEPENDS=build/debugfs.o build/util.o build/linklist.o build/mod_file.o build/mod_path.o build/log.o
 LDADD_LIBPOPULATEFS= -lpopulatefs
-OBJS=src/util.o src/log.o src/linklist.o src/debugfs.o src/mod_path.o src/mod_file.o
+OBJS=build/util.o build/log.o build/linklist.o build/debugfs.o build/mod_path.o build/mod_file.o
 HDRS=src/log.h src/util.h src/linklist.h src/debugfs.h src/mod_path.h src/mod_file.h
 
-all: $(HDRS) $(OBJS) src/main.o src/$(LIBPOPULATEFS).a src/$(LIBPOPULATEFS).so.$(VERSION) src/populatefs
+all: build/$(LIBPOPULATEFS).a build/$(LIBPOPULATEFS).so.$(VERSION) build/populatefs build/populatefs_convert_to_pseudo
 
-src/populatefs: src/main.o src/$(LIBPOPULATEFS).a $(HDRS)
-	$(CC) $< -o $@ -L./src $(LDFLAGS) $(EXTRA_LDFLAGS) -Wl,-Bstatic $(LDADD_LIBPOPULATEFS) -Wl,-Bdynamic $(LIBS) $(EXTRA_LIBS)
+build:
+	mkdir $@
 
-src/%.o: src/%.c
+build/populatefs: build/main.o build/$(LIBPOPULATEFS).a $(HDRS)
+	$(CC) $< -o $@ $(LDFLAGS) $(EXTRA_LDFLAGS) -Wl,-Bstatic $(LDADD_LIBPOPULATEFS) -Wl,-Bdynamic $(LIBS) $(EXTRA_LIBS)
+
+build/populatefs_convert_to_pseudo: build/convert_to_pseudo.o build/$(LIBPOPULATEFS).a $(HDRS)
+	$(CC) $< -o $@ $(LDFLAGS) $(EXTRA_LDFLAGS) -Wl,-Bstatic $(LDADD_LIBPOPULATEFS) -Wl,-Bdynamic $(LIBS) $(EXTRA_LIBS)
+
+build/%.o: src/%.c build
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -DPOPULATEFS_VERSION="\"$(VERSION)\"" -DPOPULATEFS_EXTRAVERSION="\"$(EXTRAVERSION)\"" $(INCLUDES) -c $< -o $@
 
-src/$(LIBPOPULATEFS).a: $(LIBPOPULATEFS_DEPENDS)
+build/$(LIBPOPULATEFS).a: $(LIBPOPULATEFS_DEPENDS)
 	$(AR)	rcsv $@	$(LIBPOPULATEFS_DEPENDS)
 	$(RANLIB) $@
 
-src/$(LIBPOPULATEFS).so.$(VERSION): $(LIBPOPULATEFS_DEPENDS)
+build/$(LIBPOPULATEFS).so.$(VERSION): $(LIBPOPULATEFS_DEPENDS)
 	$(CC) -shared -Wl,-soname,$(LIBPOPULATEFS).so -Wl,-soname,$(LIBPOPULATEFS).so.$(VERSION_MAJOR) -o $@	$(LIBPOPULATEFS_DEPENDS)
 
-install-bin: src/populatefs
+install-bin: build/populatefs build/populatefs_convert_to_pseudo
 	$(MKDIR) -p $(DESTDIR)/$(bindir)
-	$(INSTALL) src/populatefs $(DESTDIR)/$(bindir)/
+	$(INSTALL) build/populatefs $(DESTDIR)/$(bindir)/
+	$(INSTALL) build/populatefs_convert_to_pseudo $(DESTDIR)/$(bindir)/
 	$(STRIP) $(DESTDIR)/$(bindir)/populatefs
+	$(STRIP) $(DESTDIR)/$(bindir)/populatefs_convert_to_pseudo
 
 install-headers: $(HDRS)
 	$(MKDIR) -p $(DESTDIR)/$(includedir)/populatefs
@@ -67,18 +75,18 @@ install-headers: $(HDRS)
 	$(CP) src/mod_path.h $(DESTDIR)/$(includedir)/populatefs/
 	$(CP) src/mod_file.h $(DESTDIR)/$(includedir)/populatefs/
 
-install-libs: src/$(LIBPOPULATEFS).so.$(VERSION)
+install-libs: build/$(LIBPOPULATEFS).so.$(VERSION)
 	$(MKDIR) -p $(DESTDIR)/$(libdir)
 	$(RM) $(DESTDIR)/$(libdir)/$(LIBPOPULATEFS).so.$(VERSION_MAJOR) \
 		$(DESTDIR)/$(libdir)//$(LIBPOPULATEFS).so
-	$(INSTALL) src/$(LIBPOPULATEFS).so.$(VERSION) $(DESTDIR)/$(libdir)/
+	$(INSTALL) build/$(LIBPOPULATEFS).so.$(VERSION) $(DESTDIR)/$(libdir)/
 	$(STRIP) $(DESTDIR)/$(libdir)/$(LIBPOPULATEFS).so.$(VERSION)
 	$(LN_S) $(LIBPOPULATEFS).so.$(VERSION) $(DESTDIR)/$(libdir)/$(LIBPOPULATEFS).so.$(VERSION_MAJOR)
 	$(LN_S) $(LIBPOPULATEFS).so.$(VERSION) $(DESTDIR)/$(libdir)/$(LIBPOPULATEFS).so
 
-install-static-libs: src/$(LIBPOPULATEFS).a
+install-static-libs: build/$(LIBPOPULATEFS).a
 	$(MKDIR) -p $(DESTDIR)/$(libdir)
-	$(CP) src/$(LIBPOPULATEFS).a $(DESTDIR)/$(libdir)/
+	$(CP) build/$(LIBPOPULATEFS).a $(DESTDIR)/$(libdir)/
 
 uninstall-bin:
 	$(RM) $(DESTDIR)/$(bindir)/populatefs
@@ -105,4 +113,4 @@ install: all install-bin install-headers install-libs
 uninstall: uninstall-bin uninstall-libs
 
 clean:
-	$(RM) src/*.o src/*.a src/*.so* src/populatefs
+	$(RM) build/*

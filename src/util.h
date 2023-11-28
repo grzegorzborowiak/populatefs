@@ -3,6 +3,6 @@
 
 extern unsigned long oct2dec(unsigned long int value);
 
-extern const char * parseQuotes(const char * in, char * out);
+extern char * nextToken(char * in, char * out);
 
 #endif
