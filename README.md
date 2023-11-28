@@ -1,7 +1,7 @@
-populatefs 0.9
+populatefs 1.0
 ==========
 
-Is a tool that I made to nearly drop-in replace genext2fs.
+Is a nearly drop-in replace for genext2fs.
 
 Image generation
 ================
