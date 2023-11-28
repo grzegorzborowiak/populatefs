@@ -16,7 +16,7 @@ STRIP?=strip -s
 CFLAGS?= -fPIC -Wall -Werror
 EXTRA_CFLAGS?= -DHAVE_GETOPT_H=1
 INCLUDES?=
-LDFLAGS?= -L/usr/lib -L./build
+LDFLAGS+= -L/usr/lib -L./build
 EXTRA_LDFLAGS?=
 LIBS= -lext2fs
 EXTRA_LIBS?=
