@@ -38,15 +38,12 @@ LDADD_LIBPOPULATEFS= -lpopulatefs
 OBJS=build/util.o build/log.o build/linklist.o build/debugfs.o build/mod_path.o build/mod_file.o
 HDRS=src/log.h src/util.h src/linklist.h src/debugfs.h src/mod_path.h src/mod_file.h
 
-all: build/$(LIBPOPULATEFS).a build/$(LIBPOPULATEFS).so.$(VERSION) build/populatefs build/populatefs_convert_to_pseudo
+all: build/$(LIBPOPULATEFS).a build/$(LIBPOPULATEFS).so.$(VERSION) build/populatefs
 
 build:
 	mkdir $@
 
 build/populatefs: build/main.o build/$(LIBPOPULATEFS).a $(HDRS)
-	$(CC) $< -o $@ $(LDFLAGS) $(EXTRA_LDFLAGS) -Wl,-Bstatic $(LDADD_LIBPOPULATEFS) -Wl,-Bdynamic $(LIBS) $(EXTRA_LIBS)
-
-build/populatefs_convert_to_pseudo: build/convert_to_pseudo.o build/$(LIBPOPULATEFS).a $(HDRS)
 	$(CC) $< -o $@ $(LDFLAGS) $(EXTRA_LDFLAGS) -Wl,-Bstatic $(LDADD_LIBPOPULATEFS) -Wl,-Bdynamic $(LIBS) $(EXTRA_LIBS)
 
 build/%.o: src/%.c build
@@ -59,12 +56,10 @@ build/$(LIBPOPULATEFS).a: $(LIBPOPULATEFS_DEPENDS)
 build/$(LIBPOPULATEFS).so.$(VERSION): $(LIBPOPULATEFS_DEPENDS)
 	$(CC) -shared -Wl,-soname,$(LIBPOPULATEFS).so -Wl,-soname,$(LIBPOPULATEFS).so.$(VERSION_MAJOR) -o $@	$(LIBPOPULATEFS_DEPENDS)
 
-install-bin: build/populatefs build/populatefs_convert_to_pseudo
+install-bin: build/populatefs
 	$(MKDIR) -p $(DESTDIR)/$(bindir)
 	$(INSTALL) build/populatefs $(DESTDIR)/$(bindir)/
-	$(INSTALL) build/populatefs_convert_to_pseudo $(DESTDIR)/$(bindir)/
 	$(STRIP) $(DESTDIR)/$(bindir)/populatefs
-	$(STRIP) $(DESTDIR)/$(bindir)/populatefs_convert_to_pseudo
 
 install-headers: $(HDRS)
 	$(MKDIR) -p $(DESTDIR)/$(includedir)/populatefs
