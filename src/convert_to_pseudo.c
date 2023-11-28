@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	if ( path_out ) {
-		if ( NULL == freopen(path_in, "w", stdout ) ) {
+		if ( NULL == freopen(path_out, "w", stdout ) ) {
 			fprintf(stderr, "\"%s\": %m\n", path_out);
 			exit(1);
 		}
